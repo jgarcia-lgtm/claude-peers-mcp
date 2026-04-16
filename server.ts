@@ -164,6 +164,7 @@ Available tools:
 - send_message: Send a message to another instance by ID
 - set_summary: Set a 1-2 sentence summary of what you're working on (visible to other peers)
 - check_messages: Manually check for new messages
+- whoami: Return YOUR OWN peer ID (list_peers excludes self, so this is how you find it)
 
 When you start, proactively call set_summary to describe what you're working on. This helps other instances understand your context.`,
   }
@@ -227,6 +228,15 @@ const TOOLS = [
     name: "check_messages",
     description:
       "Manually check for new messages from other Claude Code instances. Messages are normally pushed automatically via channel notifications, but you can use this as a fallback.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
+    name: "whoami",
+    description:
+      "Return YOUR OWN peer ID and registration info. Useful when another instance or a human asks 'what is your peer ID?' — list_peers excludes self, so this is the only way to get your own ID.",
     inputSchema: {
       type: "object" as const,
       properties: {},
@@ -359,6 +369,24 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
           isError: true,
         };
       }
+    }
+
+    case "whoami": {
+      if (!myId) {
+        return {
+          content: [{ type: "text" as const, text: "Not registered with broker yet" }],
+          isError: true,
+        };
+      }
+      const parts = [
+        `Peer ID: ${myId}`,
+        `PID: ${process.pid}`,
+        `CWD: ${myCwd}`,
+      ];
+      if (myGitRoot) parts.push(`Repo: ${myGitRoot}`);
+      return {
+        content: [{ type: "text" as const, text: parts.join("\n") }],
+      };
     }
 
     case "check_messages": {
